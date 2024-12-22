@@ -76,5 +76,5 @@ class SVIPerceptModel(PreTrainedModel):
             kweights = torch.pow(10.0, raw_weights)  # [batch_size, self.k]
             kweights = torch.nn.functional.softmax(kweights, dim=1)  # [batch_size, self.k]
             kscores = scores[indices]  # [batch_size, self.k]
-            results[:, cat_i] = torch.sum(kscores * kweights, dim=1)
+            results[:, cat_i] = torch.sum(kscores * kweights, dim=1).cpu()
         return {"results": results}
