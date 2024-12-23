@@ -177,15 +177,16 @@ def main():
     if args.limit:
         input_numpy_files = input_numpy_files[:args.limit]
 
-    for input_numpy_file in tqdm(input_numpy_files):
+    for input_numpy_file in tqdm(input_numpy_files, desc='Getting ratings'):
         if not args.overwrite and not single_output_numpy_file and output_numpy_files[0].exists():
-            # Do not overwrite the existing output file, instead read it.
+            # Do not overwrite the existing output file, load it instead.
             results = np.load(output_numpy_files[0])
             output_numpy_files = output_numpy_files[1:]
         else:
             # Load the input CLIP features from the current input file
             clipfeatures = np.load(input_numpy_file)
             clipfeatures = torch.from_numpy(clipfeatures.astype(np.float32))
+
             # Run the model on all the features
             results = to_numpy(model(clipfeatures)['results'])
 
@@ -199,7 +200,7 @@ def main():
 
         if output_geojson:
             # Analyze the current results for inclusion in the output GeoJSON file
-            for i in tqdm(range(results.shape[0])):
+            for i in tqdm(range(results.shape[0]), desc='Building GeoJSON'):
                 ratings = results[i]
                 # The metadata has but one piece of information: the names of
                 # the image files that correspond to each row in the input
