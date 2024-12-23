@@ -254,14 +254,26 @@ def main():
         geofeaturecol = { 'type': 'FeatureCollection', 'features': geofeatures }
         gdf = gpd.GeoDataFrame.from_features(geofeaturecol)
 
+        # Ensure that any cases of duplicate subimages (e.g. at angles
+        # 5-degrees and 365-degrees) are resolved in favor of the first
+        # occurrence.
+        gdf['int_angle'] = (round(gdf['angle'], 1) * 10).astype(int) # avoid issues of floating-point comparison
+        gdf['angle'] = gdf["int_angle"] / 10
+        aggconditions = \
+                {'geometry': 'first', 'seqid': 'first', 'angle': 'first'} | \
+            { cat: 'first' for cat in model.categories }
+        gdf = gdf.groupby(['imgid','int_angle']).agg(aggconditions)
+
         if args.average_panoramic_ratings:
             # Aggregate rows with the same image ID, as they were cropped from
             # the same panoramic image originally. Average the ratings
             # together, and discard the angle as it no longer makes sense.
             aggconditions = \
-                {'geometry': 'first', 'seqid': 'first', 'angle': lambda x: None if len(x) > 1 else x} | \
+                {'geometry': 'first', 'seqid': 'first', 'angle': lambda x: set(x)} | \
                 { cat: 'mean' for cat in model.categories }
             gdf = gdf.groupby('imgid').agg(aggconditions).reset_index()
+        else:
+            gdf = gdf.reset_index().drop('int_angle', axis=1)
 
         gdf.to_file(output_geojson, driver='GeoJSON')
 
